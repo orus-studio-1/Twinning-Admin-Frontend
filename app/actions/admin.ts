@@ -64,3 +64,20 @@ export async function verifyHostAction(hostId: string, verify: boolean, userId?:
   }
 }
 
+// Restore a soft-deleted user account
+export async function restoreUserAction(userId: string) {
+  try {
+    await fetchBackendAdmin(`/admin/users/${userId}/restore`, {
+      method: "POST",
+    });
+
+    // Revalidate the admin dashboard and deleted accounts pages to fetch fresh data
+    revalidatePath("/admin");
+    revalidatePath("/admin/deleted-account");
+    revalidatePath("/admin/users");
+    return { success: true };
+  } catch (error: any) {
+    return { success: false, error: error.message || "Failed to restore user" };
+  }
+}
+

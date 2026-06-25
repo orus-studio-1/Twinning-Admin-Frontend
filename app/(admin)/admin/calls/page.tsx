@@ -58,7 +58,17 @@ export default async function AdminCallsPage() {
 }
 
 // High-Fidelity Mock Calls Data Fallback
-function getMockCallsData() {
+function getMockCallsData(): {
+  calls: CallData[];
+  metrics: {
+    totalCalls: number;
+    audioCalls: number;
+    videoCalls: number;
+    connectedCalls: number;
+    missedCalls: number;
+    averageDurationSeconds: number;
+  };
+} {
   return {
     calls: [
       {
@@ -80,7 +90,8 @@ function getMockCallsData() {
         callee_name: "Sarah Lawrence",
         callee_avatar: "https://images.unsplash.com/photo-1534528741775-53994a69daeb?auto=format&fit=crop&q=80&w=100",
         callee_phone: "+918888877777",
-        callee_is_host: true
+        callee_is_host: true,
+        charged_amount: 140.00
       },
       {
         id: "call-2",
@@ -101,7 +112,8 @@ function getMockCallsData() {
         callee_name: "Sarah Lawrence",
         callee_avatar: "https://images.unsplash.com/photo-1534528741775-53994a69daeb?auto=format&fit=crop&q=80&w=100",
         callee_phone: "+918888877777",
-        callee_is_host: true
+        callee_is_host: true,
+        charged_amount: 0.00
       },
       {
         id: "call-3",
@@ -122,7 +134,8 @@ function getMockCallsData() {
         callee_name: "John Doe",
         callee_avatar: null,
         callee_phone: "+14155558932",
-        callee_is_host: false // Anomalous or interesting flow: caller client to callee client!
+        callee_is_host: false,
+        charged_amount: 240.00
       },
       {
         id: "call-4",
@@ -143,7 +156,8 @@ function getMockCallsData() {
         callee_name: "Amit Sharma",
         callee_avatar: null,
         callee_phone: "+919876543210",
-        callee_is_host: false
+        callee_is_host: false,
+        charged_amount: 0.00
       }
     ],
     metrics: {

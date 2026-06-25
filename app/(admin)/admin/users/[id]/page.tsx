@@ -114,7 +114,7 @@ function getMockHostDetail(id: string): {
       ifsc_code: "SBIN0001234",
       upi_id: "neha.sharma@okaxis",
       bio: "Friendly and conversational host. I love meeting new people!",
-      earning_rate_percent: "65.00",
+      earning_rate_percent: "70.00",
       is_verified: true,
       is_active: true,
       total_earnings: "48200.00"
@@ -176,7 +176,7 @@ function getMockHostDetail(id: string): {
         amount: "390.00",
         status: "success",
         source: "call",
-        description: "Video call session earnings (65% share)",
+        description: "Video call session earnings (70% share)",
         created_at: new Date(Date.now() - 1000 * 60 * 45).toISOString()
       },
       {
@@ -185,7 +185,7 @@ function getMockHostDetail(id: string): {
         amount: "1170.00",
         status: "success",
         source: "call",
-        description: "Video call session earnings (65% share)",
+        description: "Video call session earnings (70% share)",
         created_at: new Date(Date.now() - 1000 * 60 * 60 * 4).toISOString()
       },
       {

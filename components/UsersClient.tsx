@@ -367,8 +367,8 @@ export default function UsersClient({ initialData }: UsersClientProps) {
               <div className="flex items-center gap-4 flex-1">
                 <div className="relative">
                   <Avatar
-                    avatarKey={user.avatar}
-                    gender={user.gender || "male"}
+                    src={user.avatar}
+                    name={user.name || user.phone}
                     className={`w-14 h-14 rounded-2xl border-2 shadow-inner transition-transform duration-300 group-hover:scale-105 ${
                       isToday
                         ? "border-[#ff2a7f]"

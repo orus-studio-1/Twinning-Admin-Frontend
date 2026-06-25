@@ -21,7 +21,8 @@ import {
   AlertCircle,
   Activity,
   Award,
-  BookOpen
+  BookOpen,
+  CreditCard
 } from "lucide-react";
 import Avatar from "./Avatar";
 import { toggleBlockUserAction, verifyHostAction } from "@/app/actions/admin";
@@ -229,8 +230,8 @@ export default function UserDetailClient({ user, hostDetails, calls, transaction
             
             <div className="relative mt-4">
               <Avatar
-                avatarKey={user.avatar}
-                gender={user.gender || "male"}
+                src={user.avatar}
+                name={user.name || user.phone}
                 className={`w-24 h-24 rounded-3xl border-4 shadow-xl ${
                   user.is_host
                     ? verified ? "border-[#ff2a7f]" : "border-amber-500/50"
@@ -513,8 +514,8 @@ export default function UserDetailClient({ user, hostDetails, calls, transaction
                         {/* Caller */}
                         <div className="flex items-center gap-2">
                           <Avatar
-                            avatarKey={call.caller_avatar}
-                            gender="male"
+                            src={call.caller_avatar}
+                            name={call.caller_name}
                             className="w-8 h-8 rounded-xl border border-white/10"
                           />
                           <div className="max-w-[70px] sm:max-w-[100px] truncate text-[11px] text-white/80 font-bold">
@@ -540,8 +541,8 @@ export default function UserDetailClient({ user, hostDetails, calls, transaction
                         {/* Callee */}
                         <div className="flex items-center gap-2">
                           <Avatar
-                            avatarKey={call.callee_avatar}
-                            gender="female"
+                            src={call.callee_avatar}
+                            name={call.callee_name}
                             className="w-8 h-8 rounded-xl border border-white/10"
                           />
                           <div className="max-w-[70px] sm:max-w-[100px] truncate text-[11px] text-white/80 font-bold">

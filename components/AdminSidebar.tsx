@@ -4,17 +4,19 @@ import React, { useState } from "react";
 import Link from "next/link";
 import Image from "next/image";
 import { usePathname, useRouter } from "next/navigation";
-import { 
-  LayoutDashboard, 
-  Users, 
-  PhoneCall, 
-  Wallet, 
-  LogOut, 
-  Menu, 
+import {
+  LayoutDashboard,
+  Users,
+  PhoneCall,
+  Wallet,
+  LogOut,
+  Menu,
   X,
   Activity,
   Video,
-  UserCheck
+  UserCheck,
+  UserX,
+  Coins
 } from "lucide-react";
 import { logoutAdmin } from "@/app/actions/auth";
 
@@ -30,11 +32,13 @@ export default function AdminSidebar() {
 
   const navItems = [
     { name: "Dashboard", href: "/admin", icon: LayoutDashboard },
+    { name: "Financial Txns", href: "/admin/transactions", icon: Wallet },
+    { name: "Internal Wallets", href: "/admin/wallets", icon: Coins },
     { name: "Manage Clients", href: "/admin/users", icon: Users },
     { name: "Manage Hosts", href: "/admin/hosts", icon: UserCheck },
     { name: "Audio Calls", href: "/admin/calls", icon: PhoneCall },
     { name: "Video Calls", href: "/admin/video-calls", icon: Video },
-    { name: "Wallet & Txns", href: "/admin/transactions", icon: Wallet },
+    { name: "Deleted Accounts", href: "/admin/deleted-account", icon: UserX },
   ];
 
   return (
@@ -43,17 +47,17 @@ export default function AdminSidebar() {
       <header className="md:hidden w-full glassmorphism-dark h-16 px-4 flex items-center justify-between border-b border-white/5 z-50">
         <div className="flex items-center gap-2">
           <div className="w-8 h-8 rounded-lg overflow-hidden border border-white/10">
-            <Image 
-              src="/twining-logo.jpeg" 
-              alt="Twinning Logo" 
-              width={32} 
-              height={32} 
+            <Image
+              src="/twining-logo.jpeg"
+              alt="Twinning Logo"
+              width={32}
+              height={32}
               className="w-full h-full object-cover"
             />
           </div>
           <span className="font-heading font-bold text-lg">Twinning Admin</span>
         </div>
-        <button 
+        <button
           onClick={() => setSidebarOpen(!sidebarOpen)}
           className="w-10 h-10 rounded-lg bg-white/5 flex items-center justify-center border border-white/5"
         >
@@ -71,11 +75,11 @@ export default function AdminSidebar() {
           {/* Logo */}
           <div className="hidden md:flex items-center gap-3">
             <div className="w-9 h-9 rounded-xl overflow-hidden border border-white/10 shadow-[0_0_15px_rgba(250,72,171,0.15)]">
-              <Image 
-                src="/twining-logo.jpeg" 
-                alt="Twinning Logo" 
-                width={36} 
-                height={36} 
+              <Image
+                src="/twining-logo.jpeg"
+                alt="Twinning Logo"
+                width={36}
+                height={36}
                 className="w-full h-full object-cover"
               />
             </div>
@@ -87,8 +91,8 @@ export default function AdminSidebar() {
           {/* Nav Items */}
           <nav className="space-y-1.5">
             {navItems.map((item) => {
-              const isActive = item.href === "/admin" 
-                ? pathname === "/admin" 
+              const isActive = item.href === "/admin"
+                ? pathname === "/admin"
                 : pathname.startsWith(item.href);
               const Icon = item.icon;
               return (
@@ -97,8 +101,8 @@ export default function AdminSidebar() {
                   href={item.href}
                   className={`
                     flex items-center gap-3 px-4 py-3 rounded-xl text-sm font-semibold transition-all duration-200 group
-                    ${isActive 
-                      ? "bg-[#fa48ab]/10 border border-[#fa48ab]/20 text-[#fa48ab] shadow-[0_0_15px_rgba(250,72,171,0.08)]" 
+                    ${isActive
+                      ? "bg-[#fa48ab]/10 border border-[#fa48ab]/20 text-[#fa48ab] shadow-[0_0_15px_rgba(250,72,171,0.08)]"
                       : "text-white/55 hover:text-white hover:bg-white/5 border border-transparent"
                     }
                   `}

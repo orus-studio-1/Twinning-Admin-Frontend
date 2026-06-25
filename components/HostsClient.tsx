@@ -399,8 +399,8 @@ export default function HostsClient({ initialData }: HostsClientProps) {
               <div className="flex flex-col sm:flex-row items-start sm:items-center gap-4 flex-1">
                 <div className="relative">
                   <Avatar
-                    avatarKey={host.avatar}
-                    gender="female"
+                    src={host.avatar}
+                    name={host.full_name || host.name || host.phone}
                     className={`w-16 h-16 rounded-2xl border-2 shadow-inner transition-transform duration-300 group-hover:scale-105 ${
                       !host.is_verified
                         ? "border-amber-500/50"

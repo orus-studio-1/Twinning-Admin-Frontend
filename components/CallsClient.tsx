@@ -42,6 +42,7 @@ export interface CallData {
   callee_avatar: string | null;
   callee_phone: string;
   callee_is_host: boolean;
+  charged_amount?: number;
 }
 
 interface CallsClientProps {
@@ -401,11 +402,9 @@ export default function CallsClient({ initialData, defaultTypeFilter }: CallsCli
                           <div 
                             key={call.id} 
                             className={`flex flex-col xl:flex-row xl:items-center justify-between gap-6 p-5 rounded-2xl border transition-all duration-200 ${
-                              isReceiverClient 
-                                ? "bg-amber-950/10 border-amber-500/15 text-amber-200 hover:border-amber-500/25" 
-                                : isToday
-                                  ? "bg-white/4 border-white/10 hover:bg-white/6 hover:border-white/15"
-                                  : "bg-white/2 border-white/5 hover:bg-white/4 hover:border-white/8"
+                              isToday
+                                ? "bg-white/4 border-white/10 hover:bg-white/6 hover:border-white/15"
+                                : "bg-white/2 border-white/5 hover:bg-white/4 hover:border-white/8"
                             }`}
                           >
                             {/* 1. Caller / Initiator Column */}
@@ -480,22 +479,14 @@ export default function CallsClient({ initialData, defaultTypeFilter }: CallsCli
 
                             {/* 4. Receiver is Client check & Routing info */}
                             <div className="flex flex-wrap items-center justify-between xl:justify-end gap-6 shrink-0 border-t border-white/5 pt-4 xl:border-t-0 xl:pt-0 min-w-[240px]">
-                              {/* Callee Security Audit Badge */}
+                              {/* Charged Amount Badge */}
                               <div className="space-y-1 text-left xl:text-center">
                                 <span className="block text-[10px] text-white/30 font-semibold uppercase tracking-wider">
-                                  Routing Integrity
+                                  Charged Amount
                                 </span>
-                                {isReceiverClient ? (
-                                  <span className="inline-flex items-center gap-1 text-[10px] font-bold px-3 py-1 rounded-lg bg-amber-500/15 text-amber-400 border border-amber-500/25 shadow-[0_2px_8px_rgba(245,158,11,0.08)]">
-                                    <ShieldAlert className="w-3.5 h-3.5" />
-                                    Receiver is Client (Direct)
-                                  </span>
-                                ) : (
-                                  <span className="inline-flex items-center gap-1 text-[10px] font-bold px-3 py-1 rounded-lg bg-green-500/15 text-green-400 border border-green-500/25">
-                                    <ShieldCheck className="w-3.5 h-3.5" />
-                                    Receiver is Host (Standard)
-                                  </span>
-                                )}
+                                <span className="inline-flex items-center gap-1 text-xs font-mono font-bold px-3 py-1 rounded-lg bg-[#fa48ab]/10 text-[#fa48ab] border border-[#fa48ab]/20 shadow-[0_2px_8px_rgba(250,72,171,0.08)]">
+                                  {call.charged_amount ?? 0} Credits
+                                </span>
                               </div>
 
                               {/* Status and Timestamp */}

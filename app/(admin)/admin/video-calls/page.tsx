@@ -1,5 +1,5 @@
 import React from "react";
-import CallsClient from "@/components/CallsClient";
+import CallsClient, { CallData } from "@/components/CallsClient";
 
 export const revalidate = 0; // Disable static caching
 
@@ -58,7 +58,17 @@ export default async function AdminVideoCallsPage() {
 }
 
 // High-Fidelity Mock Video Calls Data Fallback
-function getMockVideoCallsData() {
+function getMockVideoCallsData(): {
+  calls: CallData[];
+  metrics: {
+    totalCalls: number;
+    audioCalls: number;
+    videoCalls: number;
+    connectedCalls: number;
+    missedCalls: number;
+    averageDurationSeconds: number;
+  };
+} {
   return {
     calls: [
       {
@@ -80,7 +90,8 @@ function getMockVideoCallsData() {
         callee_name: "Sarah Lawrence",
         callee_avatar: "/avatars/Female_Avatar_1.png",
         callee_phone: "+918888877777",
-        callee_is_host: true
+        callee_is_host: true,
+        charged_amount: 260.00
       },
       {
         id: "v-call-2",
@@ -101,7 +112,8 @@ function getMockVideoCallsData() {
         callee_name: "Sarah Lawrence",
         callee_avatar: "/avatars/Female_Avatar_1.png",
         callee_phone: "+918888877777",
-        callee_is_host: true
+        callee_is_host: true,
+        charged_amount: 800.00
       },
       {
         id: "v-call-3",
@@ -122,7 +134,8 @@ function getMockVideoCallsData() {
         callee_name: "Rajesh Kumar",
         callee_avatar: null,
         callee_phone: "+919999988888",
-        callee_is_host: false // Anomalous receiver check (client to client video!)
+        callee_is_host: false,
+        charged_amount: 600.00
       },
       {
         id: "v-call-4",
@@ -143,7 +156,8 @@ function getMockVideoCallsData() {
         callee_name: "Alexander K.",
         callee_avatar: "https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?auto=format&fit=crop&q=80&w=100",
         callee_phone: "+14155552671",
-        callee_is_host: false
+        callee_is_host: false,
+        charged_amount: 0.00
       }
     ],
     metrics: {
