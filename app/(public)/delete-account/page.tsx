@@ -7,7 +7,7 @@ export const metadata: Metadata = {
   description: "How to request deletion of your Twining account and associated data.",
 };
 
-const SUPPORT_EMAIL = "amouralabs2026@gmail.com";
+const SUPPORT_EMAIL = "twining.app@gmail.com";
 const MAILTO = `mailto:${SUPPORT_EMAIL}?subject=${encodeURIComponent("Twining account deletion request")}`;
 
 export default function DeleteAccountPage() {
