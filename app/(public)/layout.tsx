@@ -100,6 +100,11 @@ export default function PublicLayout({
                   Terms & Conditions
                 </Link>
               </li>
+              <li>
+                <Link href="/delete-account" className="hover:text-white transition-colors">
+                  Delete Account
+                </Link>
+              </li>
             </ul>
           </div>
           <div>
