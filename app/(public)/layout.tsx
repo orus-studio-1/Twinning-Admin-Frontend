@@ -105,6 +105,11 @@ export default function PublicLayout({
                   Delete Account
                 </Link>
               </li>
+              <li>
+                <Link href="/child-safety" className="hover:text-white transition-colors">
+                  Child Safety
+                </Link>
+              </li>
             </ul>
           </div>
           <div>
