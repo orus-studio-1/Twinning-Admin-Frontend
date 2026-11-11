@@ -43,12 +43,12 @@ export async function toggleBlockUserAction(userId: string, block: boolean) {
   }
 }
 
-// Verify or reject a host profile
-export async function verifyHostAction(hostId: string, verify: boolean, userId?: string) {
+// Approve or reject a host application. The reason is shown to the applicant when rejected.
+export async function verifyHostAction(hostId: string, verify: boolean, userId?: string, reason?: string) {
   try {
     await fetchBackendAdmin(`/admin/hosts/${hostId}/verify`, {
       method: "POST",
-      body: JSON.stringify({ verify }),
+      body: JSON.stringify({ verify, reason }),
     });
 
     // Revalidate the admin dashboard and host pages to fetch fresh data

@@ -21,10 +21,32 @@ import {
   Percent,
   Check,
   X,
-  CreditCard
+  CreditCard,
+  Eye,
+  EyeOff,
+  FileSearch,
+  Clock,
+  Landmark,
+  Smartphone,
+  User
 } from "lucide-react";
 import Avatar from "./Avatar";
 import { verifyHostAction, toggleBlockUserAction } from "@/app/actions/admin";
+
+type HostReviewStatus = "pending" | "approved" | "rejected";
+
+// Older backends only had is_verified; treat that as approved/pending
+const getReviewStatus = (host: HostClientData): HostReviewStatus =>
+  host.verification_status ?? (host.is_verified ? "approved" : "pending");
+
+const CREDITS_PER_RUPEE = 4;
+
+const REJECTION_TEMPLATES = [
+  "The name on your application does not match your Aadhaar details.",
+  "Your Aadhaar number could not be verified.",
+  "Your bank account or UPI details could not be verified.",
+  "Your profile does not meet our host guidelines.",
+];
 
 export interface HostClientData {
   id: string; // user_id
@@ -50,6 +72,13 @@ export interface HostClientData {
   is_verified: boolean;
   is_active: boolean;
   total_earnings: string | number | null;
+  // Review workflow
+  verification_status?: HostReviewStatus;
+  rejection_reason?: string | null;
+  reviewed_at?: string | null;
+  earnings_balance?: string | number | null;
+  applied_at?: string | null;
+  age?: number | null;
 }
 
 interface HostsClientProps {
@@ -87,15 +116,42 @@ export default function HostsClient({ initialData }: HostsClientProps) {
     )
   ).sort();
 
-  // Handle host verification approval/rejection
-  const handleVerifyHost = async (hostId: string, userId: string, verify: boolean) => {
+  // Application review panel
+  const [reviewHostId, setReviewHostId] = useState<string | null>(null);
+  const [showAadhaar, setShowAadhaar] = useState(false);
+  const [isRejecting, setIsRejecting] = useState(false);
+  const [rejectionReason, setRejectionReason] = useState("");
+  const reviewHost = hosts.find((h) => h.host_id === reviewHostId) ?? null;
+
+  const openReview = (hostId: string, startRejecting = false) => {
+    setReviewHostId(hostId);
+    setShowAadhaar(false);
+    setIsRejecting(startRejecting);
+    setRejectionReason("");
+  };
+
+  const closeReview = () => setReviewHostId(null);
+
+  // Approve or reject a host application
+  const handleVerifyHost = async (hostId: string, userId: string, verify: boolean, reason?: string) => {
     setIsActionLoading((prev) => ({ ...prev, [hostId]: true }));
     try {
-      const result = await verifyHostAction(hostId, verify, userId);
+      const result = await verifyHostAction(hostId, verify, userId, reason);
       if (result.success) {
         setHosts((prev) =>
-          prev.map((h) => (h.host_id === hostId ? { ...h, is_verified: verify } : h))
+          prev.map((h) =>
+            h.host_id === hostId
+              ? {
+                  ...h,
+                  is_verified: verify,
+                  verification_status: verify ? "approved" : "rejected",
+                  rejection_reason: verify ? null : reason || null,
+                  reviewed_at: new Date().toISOString(),
+                }
+              : h
+          )
         );
+        closeReview();
       } else {
         alert(result.error || "Failed to update host verification status");
       }
@@ -141,9 +197,7 @@ export default function HostsClient({ initialData }: HostsClientProps) {
       host.id.includes(searchLower);
 
     const matchesVerification =
-      verificationFilter === "all" ||
-      (verificationFilter === "verified" && host.is_verified) ||
-      (verificationFilter === "pending" && !host.is_verified);
+      verificationFilter === "all" || getReviewStatus(host) === verificationFilter;
 
     const matchesLocation =
       locationFilter === "all" || host.location === locationFilter;
@@ -163,7 +217,8 @@ export default function HostsClient({ initialData }: HostsClientProps) {
       return parseFloat(String(b.earning_rate_percent || 0)) - parseFloat(String(a.earning_rate_percent || 0));
     }
     if (sortBy === "pending_first") {
-      return (a.is_verified ? 1 : 0) - (b.is_verified ? 1 : 0);
+      const order: Record<HostReviewStatus, number> = { pending: 0, rejected: 1, approved: 2 };
+      return order[getReviewStatus(a)] - order[getReviewStatus(b)];
     }
     if (sortBy === "name_asc") {
       return (a.full_name || "").localeCompare(b.full_name || "");
@@ -173,12 +228,11 @@ export default function HostsClient({ initialData }: HostsClientProps) {
 
   // Metrics
   const totalHostsCount = hosts.length;
-  const verifiedHostsCount = hosts.filter((h) => h.is_verified).length;
-  const pendingVerificationCount = hosts.filter((h) => !h.is_verified).length;
-  const totalHostEarnings = hosts.reduce(
-    (acc, h) => acc + parseFloat(String(h.total_earnings || 0)),
-    0
-  );
+  const verifiedHostsCount = hosts.filter((h) => getReviewStatus(h) === "approved").length;
+  const pendingVerificationCount = hosts.filter((h) => getReviewStatus(h) === "pending").length;
+  // total_earnings is stored in credits; shown here in rupees
+  const totalHostEarnings =
+    hosts.reduce((acc, h) => acc + parseFloat(String(h.total_earnings || 0)), 0) / CREDITS_PER_RUPEE;
 
   // Pagination Math
   const totalItems = sortedHosts.length;
@@ -205,7 +259,7 @@ export default function HostsClient({ initialData }: HostsClientProps) {
       h.ifsc_code || "N/A",
       h.earning_rate_percent,
       h.total_earnings || "0.00",
-      h.is_verified ? "Verified" : "Pending",
+      { pending: "Pending", approved: "Approved", rejected: "Rejected" }[getReviewStatus(h)],
       h.is_blocked ? "Blocked" : "Active",
       new Date(h.created_at).toLocaleDateString("en-US")
     ]);
@@ -327,9 +381,10 @@ export default function HostsClient({ initialData }: HostsClientProps) {
               onChange={(e) => setVerificationFilter(e.target.value)}
               className="bg-white/5 border border-white/5 rounded-xl px-3 py-2 text-white/80 text-xs focus:outline-none focus:border-[#ff2a7f]/45 cursor-pointer hover:bg-white/10 transition-all duration-200"
             >
-              <option value="all" className="bg-[#0f0f10]">All Verification Status</option>
-              <option value="verified" className="bg-[#0f0f10]">Verified Only</option>
-              <option value="pending" className="bg-[#0f0f10]">Pending Only</option>
+              <option value="all" className="bg-[#0f0f10]">All Application Status</option>
+              <option value="pending" className="bg-[#0f0f10]">Pending Review</option>
+              <option value="approved" className="bg-[#0f0f10]">Approved</option>
+              <option value="rejected" className="bg-[#0f0f10]">Rejected</option>
             </select>
 
             {/* Location */}
@@ -381,7 +436,9 @@ export default function HostsClient({ initialData }: HostsClientProps) {
       {/* Host Cards Display */}
       <div className="space-y-4">
         {paginatedHosts.map((host) => {
-          const totalEarnings = parseFloat(String(host.total_earnings || 0));
+          const totalEarnings = parseFloat(String(host.total_earnings || 0)) / CREDITS_PER_RUPEE;
+          const reviewStatus = getReviewStatus(host);
+          const isApproved = reviewStatus === "approved";
           const isToday =
             mounted &&
             new Date(host.created_at).toDateString() === new Date().toDateString();
@@ -393,7 +450,7 @@ export default function HostsClient({ initialData }: HostsClientProps) {
                 isToday
                   ? "border-[#ff2a7f]/30 bg-[#ff2a7f]/[0.02] hover:bg-[#ff2a7f]/[0.04]"
                   : "border-white/5 hover:border-white/10 hover:bg-white/[0.01]"
-              } ${!host.is_verified ? "border-amber-500/20 bg-amber-500/[0.005]" : ""} ${host.is_blocked ? "opacity-70" : ""}`}
+              } ${reviewStatus === "pending" ? "border-amber-500/20 bg-amber-500/[0.005]" : ""} ${host.is_blocked ? "opacity-70" : ""}`}
             >
               {/* Profile Details Area */}
               <div className="flex flex-col sm:flex-row items-start sm:items-center gap-4 flex-1">
@@ -402,17 +459,24 @@ export default function HostsClient({ initialData }: HostsClientProps) {
                     src={host.avatar}
                     name={host.full_name || host.name || host.phone}
                     className={`w-16 h-16 rounded-2xl border-2 shadow-inner transition-transform duration-300 group-hover:scale-105 ${
-                      !host.is_verified
+                      reviewStatus === "pending"
                         ? "border-amber-500/50"
+                        : reviewStatus === "rejected"
+                        ? "border-rose-500/50"
                         : "border-[#ff2a7f]"
                     }`}
                   />
-                  {!host.is_verified && (
-                    <div className="absolute -top-1 -right-1 bg-amber-500 rounded-full p-0.5 border border-black" title="Verification Pending">
+                  {reviewStatus === "pending" && (
+                    <div className="absolute -top-1 -right-1 bg-amber-500 rounded-full p-0.5 border border-black" title="Awaiting Review">
                       <ShieldAlert className="w-3.5 h-3.5 text-black" />
                     </div>
                   )}
-                  {host.is_verified && (
+                  {reviewStatus === "rejected" && (
+                    <div className="absolute -top-1 -right-1 bg-rose-500 rounded-full p-0.5 border border-black" title="Application Rejected">
+                      <X className="w-3.5 h-3.5 text-white" />
+                    </div>
+                  )}
+                  {isApproved && (
                     <div className="absolute -top-1 -right-1 bg-[#ff2a7f] rounded-full p-0.5 border border-black" title="Verified Host">
                       <ShieldCheck className="w-3.5 h-3.5 text-white" />
                     </div>
@@ -434,6 +498,7 @@ export default function HostsClient({ initialData }: HostsClientProps) {
                         Blocked User
                       </span>
                     )}
+                    <StatusPill status={reviewStatus} />
                   </div>
 
                   <div className="flex flex-wrap items-center gap-x-4 gap-y-1 text-xs text-white/45">
@@ -495,24 +560,25 @@ export default function HostsClient({ initialData }: HostsClientProps) {
                     <span>Audit</span>
                   </Link>
 
-                  {/* Verification Quick Action */}
-                  {!host.is_verified ? (
+                  {/* Application review */}
+                  {reviewStatus === "pending" ? (
                     <button
-                      onClick={() => handleVerifyHost(host.host_id, host.id, true)}
+                      onClick={() => openReview(host.host_id)}
                       disabled={isActionLoading[host.host_id]}
                       className="flex items-center gap-1 px-3 py-2 rounded-xl bg-amber-500 hover:bg-amber-600 text-black text-xs font-bold transition-all duration-200 disabled:opacity-30"
                     >
-                      <Check className="w-3.5 h-3.5" />
-                      <span>Verify Host</span>
+                      <FileSearch className="w-3.5 h-3.5" />
+                      <span>Review Application</span>
                     </button>
                   ) : (
                     <button
-                      onClick={() => handleVerifyHost(host.host_id, host.id, false)}
+                      onClick={() => openReview(host.host_id)}
                       disabled={isActionLoading[host.host_id]}
-                      className="flex items-center justify-center p-2 rounded-xl bg-white/3 border border-white/5 hover:bg-white/5 text-white/60 hover:text-rose-400 transition-all duration-200 disabled:opacity-30"
-                      title="Revoke Verification"
+                      className="flex items-center gap-1 px-3 py-2 rounded-xl bg-white/3 border border-white/5 hover:bg-white/5 text-white/70 text-xs font-bold transition-all duration-200 disabled:opacity-30"
+                      title="View application"
                     >
-                      <X className="w-4 h-4" />
+                      <FileSearch className="w-3.5 h-3.5" />
+                      <span>Details</span>
                     </button>
                   )}
 
@@ -572,6 +638,7 @@ export default function HostsClient({ initialData }: HostsClientProps) {
 
           <div className="flex items-center gap-1.5">
             <button
+              aria-label="Previous page"
               onClick={() => setCurrentPage((prev) => Math.max(1, prev - 1))}
               disabled={currentPage === 1}
               className="px-3 py-2 rounded-xl bg-white/3 border border-white/5 hover:bg-white/5 text-white disabled:opacity-30 disabled:hover:bg-white/3 transition-all duration-200"
@@ -612,6 +679,247 @@ export default function HostsClient({ initialData }: HostsClientProps) {
           </div>
         </div>
       )}
+
+      {/* Application Review Panel */}
+      {reviewHost && (
+        <div
+          className="fixed inset-0 z-50 flex items-center justify-center bg-black/70 backdrop-blur-sm p-4"
+          onClick={closeReview}
+        >
+          <div
+            className="glassmorphism bg-[#0f0f10] w-full max-w-2xl max-h-[90vh] overflow-y-auto rounded-3xl border border-white/10 p-6 space-y-6"
+            onClick={(e) => e.stopPropagation()}
+            role="dialog"
+            aria-modal="true"
+            aria-labelledby="host-review-title"
+          >
+            {/* Header */}
+            <div className="flex items-start justify-between gap-4">
+              <div className="flex items-center gap-4 min-w-0">
+                <Avatar
+                  src={reviewHost.avatar}
+                  name={reviewHost.full_name || reviewHost.name || reviewHost.phone}
+                  className="w-14 h-14 rounded-2xl border-2 border-white/10"
+                />
+                <div className="min-w-0">
+                  <h2 id="host-review-title" className="text-lg font-bold text-white font-heading truncate">
+                    {reviewHost.full_name}
+                  </h2>
+                  <div className="flex flex-wrap items-center gap-2 mt-1">
+                    <StatusPill status={getReviewStatus(reviewHost)} />
+                    <span className="text-[11px] text-white/40 flex items-center gap-1">
+                      <Clock className="w-3 h-3" />
+                      Applied {formatDate(reviewHost.applied_at || reviewHost.created_at)}
+                    </span>
+                  </div>
+                </div>
+              </div>
+              <button
+                onClick={closeReview}
+                className="p-2 rounded-xl bg-white/5 hover:bg-white/10 text-white/60 hover:text-white transition-all duration-200"
+                aria-label="Close"
+              >
+                <X className="w-4 h-4" />
+              </button>
+            </div>
+
+            {getReviewStatus(reviewHost) === "rejected" && reviewHost.rejection_reason && (
+              <div className="p-4 rounded-2xl bg-rose-500/10 border border-rose-500/20 text-xs text-rose-300">
+                <span className="font-bold block mb-1">Reason shared with applicant</span>
+                {reviewHost.rejection_reason}
+              </div>
+            )}
+
+            {/* Identity */}
+            <section className="space-y-3">
+              <h3 className="text-xs font-semibold text-white/45 uppercase tracking-wider flex items-center gap-1.5">
+                <User className="w-3.5 h-3.5" /> Identity
+              </h3>
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                <DetailRow label="Legal name" value={reviewHost.full_name} />
+                <DetailRow
+                  label="Date of birth"
+                  value={`${formatDate(reviewHost.date_of_birth)}${ageFrom(reviewHost.date_of_birth) !== null ? ` (${ageFrom(reviewHost.date_of_birth)} yrs)` : ""}`}
+                />
+                <DetailRow
+                  label="Aadhaar number"
+                  value={showAadhaar ? reviewHost.aadhar_number?.replace(/(\d{4})(?=\d)/g, "$1 ") : formatAadhar(reviewHost.aadhar_number)}
+                  action={
+                    <button
+                      onClick={() => setShowAadhaar((v) => !v)}
+                      className="text-white/40 hover:text-white transition-colors"
+                      aria-label={showAadhaar ? "Hide Aadhaar number" : "Show Aadhaar number"}
+                    >
+                      {showAadhaar ? <EyeOff className="w-3.5 h-3.5" /> : <Eye className="w-3.5 h-3.5" />}
+                    </button>
+                  }
+                />
+                <DetailRow label="Phone" value={reviewHost.phone} />
+                <DetailRow label="Profile name" value={reviewHost.name || "—"} />
+                <DetailRow
+                  label="Profile age · gender"
+                  value={`${reviewHost.age ?? "—"} · ${reviewHost.gender ?? "—"}`}
+                />
+              </div>
+              {reviewHost.bio && (
+                <p className="text-xs text-white/60 bg-white/3 border border-white/5 rounded-xl p-3 italic">
+                  &ldquo;{reviewHost.bio}&rdquo;
+                </p>
+              )}
+            </section>
+
+            {/* Payout */}
+            <section className="space-y-3">
+              <h3 className="text-xs font-semibold text-white/45 uppercase tracking-wider flex items-center gap-1.5">
+                <CreditCard className="w-3.5 h-3.5" /> Payout details
+              </h3>
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                <DetailRow
+                  label="Bank account"
+                  value={reviewHost.bank_account_number || "Not provided"}
+                  icon={<Landmark className="w-3.5 h-3.5 text-white/30" />}
+                />
+                <DetailRow label="IFSC" value={reviewHost.ifsc_code || "Not provided"} />
+                <DetailRow
+                  label="UPI ID"
+                  value={reviewHost.upi_id || "Not provided"}
+                  icon={<Smartphone className="w-3.5 h-3.5 text-white/30" />}
+                />
+                <DetailRow
+                  label="Earnings to withdraw"
+                  value={`${parseFloat(String(reviewHost.earnings_balance || 0)).toLocaleString("en-IN")} credits`}
+                />
+              </div>
+            </section>
+
+            {/* Decision */}
+            {isRejecting ? (
+              <section className="space-y-3 pt-2 border-t border-white/5">
+                <h3 className="text-sm font-bold text-white">Reason for rejection</h3>
+                <p className="text-[11px] text-white/45">
+                  The applicant will see this message in the app and can correct their details and apply again.
+                </p>
+                <div className="flex flex-wrap gap-2">
+                  {REJECTION_TEMPLATES.map((template) => (
+                    <button
+                      key={template}
+                      onClick={() => setRejectionReason(template)}
+                      className={`text-[11px] px-3 py-1.5 rounded-full border transition-all duration-200 ${
+                        rejectionReason === template
+                          ? "border-[#ff2a7f] bg-[#ff2a7f]/10 text-[#ff2a7f]"
+                          : "border-white/10 bg-white/3 text-white/60 hover:text-white"
+                      }`}
+                    >
+                      {template}
+                    </button>
+                  ))}
+                </div>
+                <textarea
+                  value={rejectionReason}
+                  onChange={(e) => setRejectionReason(e.target.value)}
+                  maxLength={500}
+                  rows={3}
+                  placeholder="Explain what the applicant needs to fix..."
+                  className="w-full px-4 py-3 rounded-xl bg-white/3 border border-white/10 text-white placeholder-white/30 text-sm focus:outline-none focus:border-[#ff2a7f]/45 focus:ring-1 focus:ring-[#ff2a7f]/20 transition-all duration-200"
+                />
+                <div className="flex justify-end gap-2">
+                  <button
+                    onClick={() => setIsRejecting(false)}
+                    className="px-4 py-2.5 rounded-xl bg-white/5 hover:bg-white/10 text-white text-xs font-bold border border-white/5 transition-all duration-200"
+                  >
+                    Back
+                  </button>
+                  <button
+                    onClick={() => handleVerifyHost(reviewHost.host_id, reviewHost.id, false, rejectionReason.trim())}
+                    disabled={!rejectionReason.trim() || isActionLoading[reviewHost.host_id]}
+                    className="flex items-center gap-1.5 px-4 py-2.5 rounded-xl bg-rose-600 hover:bg-rose-700 text-white text-xs font-bold transition-all duration-200 disabled:opacity-30"
+                  >
+                    <X className="w-3.5 h-3.5" />
+                    Confirm Rejection
+                  </button>
+                </div>
+              </section>
+            ) : (
+              <div className="flex flex-col-reverse sm:flex-row sm:justify-end gap-2 pt-4 border-t border-white/5">
+                {getReviewStatus(reviewHost) !== "rejected" && (
+                  <button
+                    onClick={() => setIsRejecting(true)}
+                    disabled={isActionLoading[reviewHost.host_id]}
+                    className="flex items-center justify-center gap-1.5 px-4 py-2.5 rounded-xl bg-rose-950/30 hover:bg-rose-950/50 border border-rose-500/20 text-rose-400 text-xs font-bold transition-all duration-200 disabled:opacity-30"
+                  >
+                    <X className="w-3.5 h-3.5" />
+                    {getReviewStatus(reviewHost) === "approved" ? "Revoke Approval" : "Reject"}
+                  </button>
+                )}
+                {getReviewStatus(reviewHost) !== "approved" && (
+                  <button
+                    onClick={() => handleVerifyHost(reviewHost.host_id, reviewHost.id, true)}
+                    disabled={isActionLoading[reviewHost.host_id]}
+                    className="flex items-center justify-center gap-1.5 px-4 py-2.5 rounded-xl bg-emerald-500 hover:bg-emerald-600 text-black text-xs font-bold transition-all duration-200 disabled:opacity-30"
+                  >
+                    <Check className="w-3.5 h-3.5" />
+                    Approve Host
+                  </button>
+                )}
+              </div>
+            )}
+          </div>
+        </div>
+      )}
     </div>
   );
+}
+
+function StatusPill({ status }: { status: HostReviewStatus }) {
+  const styles: Record<HostReviewStatus, string> = {
+    pending: "text-amber-400 bg-amber-500/10 border-amber-500/20",
+    approved: "text-emerald-400 bg-emerald-500/10 border-emerald-500/20",
+    rejected: "text-rose-400 bg-rose-500/10 border-rose-500/20",
+  };
+  const labels: Record<HostReviewStatus, string> = {
+    pending: "Pending Review",
+    approved: "Approved",
+    rejected: "Rejected",
+  };
+  return (
+    <span className={`text-[9px] font-extrabold border px-1.5 py-0.5 rounded-md uppercase tracking-wider ${styles[status]}`}>
+      {labels[status]}
+    </span>
+  );
+}
+
+function DetailRow({
+  label,
+  value,
+  icon,
+  action,
+}: {
+  label: string;
+  value: string;
+  icon?: React.ReactNode;
+  action?: React.ReactNode;
+}) {
+  return (
+    <div className="p-3 rounded-xl bg-white/3 border border-white/5 min-w-0">
+      <p className="text-[10px] text-white/35 font-semibold uppercase tracking-wider">{label}</p>
+      <div className="flex items-center justify-between gap-2 mt-1">
+        <span className="flex items-center gap-1.5 text-sm text-white/90 font-medium break-all">
+          {icon}
+          {value}
+        </span>
+        {action}
+      </div>
+    </div>
+  );
+}
+
+function ageFrom(dateOfBirth: string): number | null {
+  const dob = new Date(dateOfBirth);
+  if (Number.isNaN(dob.getTime())) return null;
+  const now = new Date();
+  let age = now.getFullYear() - dob.getFullYear();
+  const beforeBirthday =
+    now.getMonth() < dob.getMonth() || (now.getMonth() === dob.getMonth() && now.getDate() < dob.getDate());
+  if (beforeBirthday) age--;
+  return age;
 }
