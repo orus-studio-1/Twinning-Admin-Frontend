@@ -1,4 +1,5 @@
 import React from "react";
+import { PLAY_STORE_URL } from "@/lib/links";
 import { 
   Video, 
   Globe, 
@@ -50,7 +51,9 @@ export default function LandingPage() {
               <div className="flex flex-col sm:flex-row items-center justify-center lg:justify-start gap-4" id="download">
                 {/* Play Store */}
                 <a 
-                  href="#" 
+                  href={PLAY_STORE_URL}
+                  target="_blank"
+                  rel="noopener noreferrer" 
                   className="w-full sm:w-auto flex items-center justify-center gap-3 bg-white/5 hover:bg-white/8 border border-white/10 hover:border-white/15 text-white py-3.5 px-6 rounded-2xl transition-all duration-300 group"
                 >
                   <Smartphone className="w-6 h-6 text-white/80 group-hover:scale-105 transition-transform" />

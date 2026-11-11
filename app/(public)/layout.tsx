@@ -1,5 +1,6 @@
 import React from "react";
 import Link from "next/link";
+import { PLAY_STORE_URL } from "@/lib/links";
 import Image from "next/image";
 import { Shield, ShieldAlert, ArrowRight } from "lucide-react";
 
@@ -51,13 +52,15 @@ export default function PublicLayout({
           {/* Action CTA */}
           <div className="flex items-center gap-4">
 
-            <Link
-              href="/#download"
+            <a
+              href={PLAY_STORE_URL}
+              target="_blank"
+              rel="noopener noreferrer"
               className="relative inline-flex items-center gap-1 bg-[#fa48ab] text-white text-sm font-semibold py-2.5 px-5 rounded-xl shadow-[0_4px_20px_rgba(250,72,171,0.3)] hover:shadow-[0_4px_25px_rgba(250,72,171,0.45)] hover:bg-[#fa48ab]/95 transition-all duration-300 group"
             >
               Download App
               <ArrowRight className="w-4 h-4 group-hover:translate-x-0.5 transition-transform" />
-            </Link>
+            </a>
           </div>
         </div>
       </header>
@@ -123,7 +126,7 @@ export default function PublicLayout({
                 </Link>
               </li>
               <li>
-                <a href="#download" className="hover:text-white transition-colors">
+                <a href={PLAY_STORE_URL} target="_blank" rel="noopener noreferrer" className="hover:text-white transition-colors">
                   Download Mobile App
                 </a>
               </li>
